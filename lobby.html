@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="inicio.css">
+    <title>Acorn Rush | Lobby </title>
+    <link rel="icon" href="Modelos/squirrel.webp">
+</head>
+<body id="lobby">
+    <audio autoplay>
+        <source src="Club Penguin - Pizza Parlor Theme (Charlie's Here) [FULL High Quality].mp3" type="audio/mpeg">
+    </audio>
+    <div class="lobby">
+        <div class="lobbyDiv"> <!--DIV2-->
+            <section id="mapa">
+                <h1 class="lobbyText">Seleccion de mapa</h1>
+                <div>
+                    <div class="mapa">
+                        <button class="imgBtn" id="Nieve" type="submit">
+                        <img src="Imagenes/nieve.jpg" alt="Nieve">
+                        </button>
+                    </div>
+
+                    <div class="mapa">
+                        <button class="imgBtn" id="Desierto" type="submit">
+                        <img src="Imagenes/desierto.jpg" alt="Desierto">
+                        </button>
+                    </div>
+
+                    <div class="mapa">
+                        <button class="imgBtn" id="Bosque" type="submit">
+                        <img src="Imagenes/bosque.jpg" alt="Bosque">
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="botonComenzar">
+                <button class="botonComenzar">COMENZAR PARTIDA</button>
+                <a href="index.html"><button class="salirLobby">Regresar a inicio</button></a>
+            </section>
+    
+        </div>
+    
+        <div class="lobbyDiv"> <!--DIV1-->
+            <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+            <section id="modo">
+                <h1 class="lobbyText">Modo de juego</h1>
+                <button class="botonModo" id="Solo" type="button">Un jugador</button>
+                <button class="botonModo" id="multi" type="button">Dos jugadores</button>
+
+            </section>
+
+            <section id="dificultad">
+                <h1 class="lobbyText">Dificultad (Dos jugadores)</h1>
+                <button class="botonDificultad" disabled id="normal" type="button">Normal</button>
+                <button class="botonDificultad" disabled id="hyper" type="button">Hyper</button>
+            </section>
+            
+        </div>
+    </div>    
+
+    <script> //ACTIVAR BOTONES DE MAPA
+        $('.imgBtn').click(function(e) {
+        $('.imgBtn').removeClass('active');
+        $(this).addClass('active');
+        });
+    </script>
+
+    <script> //ACTIVAR BOTONES DE MODO DE JUEGO
+        $('.botonModo').click(function(e) {
+        $('.botonModo').removeClass('active');
+        $(this).addClass('active');
+        });
+    </script>
+
+    <script> //ACTIVAR BOTONES DE DIFICULTAD
+        $('.botonDificultad').click(function(e) {
+        $('.botonDificultad').removeClass('active');
+        $(this).addClass('active');
+        });
+    </script>
+
+    <script> //OCULTAR SECCIÓN DIFICULTAD
+        document.getElementById("multi").onclick = function() {
+            var botonDif = document.getElementsByClassName("botonDificultad");
+            $('.botonDificultad').removeAttr("disabled");
+        };
+
+        document.getElementById("Solo").onclick = function() {
+            //console.log("caca");
+            var botonDif = document.getElementsByClassName("botonDificultad");
+            $('.botonDificultad').prop("disabled", true);
+            $('.botonDificultad').removeClass('active');
+        };
+    </script>
+
+
+<!-- Add this script at the end of your HTML body section -->
+<script>
+    // Function to concatenate selected buttons and redirect
+    function concatenateAndRedirect() {
+        // Get the concatenated value of selected buttons
+        var concatenatedValue = $('.active').map(function() {
+            return this.id; // Assuming the button IDs are meaningful
+        }).get().join('_'); // Use '_' as a separator, you can change it as needed
+            console.log(concatenatedValue)
+        // Redirect to another page based on the concatenated value
+
+        //SINGLE
+        if (concatenatedValue == "Bosque_Solo") {
+            window.location.href = "Solo_Bosque.html";
+        } 
+        if (concatenatedValue == "Desierto_Solo") {
+            window.location.href = "Solo_Desierto.html";
+        } 
+        if (concatenatedValue == "Nieve_Solo") {
+            window.location.href = "Solo_Nieve.html";
+        } 
+
+
+        //MULTI NORMAL
+        if (concatenatedValue == "Bosque_multi_normal") {
+            window.location.href = "MultiNormal_Bosque.html";
+        } 
+        if (concatenatedValue == "Desierto_multi_normal") {
+            window.location.href = "MultiNormal_Desierto.html";
+        }
+        if (concatenatedValue == "Nieve_multi_normal") {
+            window.location.href = "MultiNormal_Nieve.html";
+        }
+
+        //MULTI HYPER
+        if (concatenatedValue == "Bosque_multi_hyper") {
+            window.location.href = "MultiHyper_Bosque.html";
+        }
+        if (concatenatedValue == "Desierto_multi_hyper") {
+            window.location.href = "MultiHyper_Desierto.html";
+        }
+        if (concatenatedValue == "Nieve_multi_hyper") {
+            window.location.href = "MultiHyper_Nieve.html";
+        }
+
+    }
+
+    // Modify the click event on the "COMENZAR PARTIDA" button to call the new function
+    $('.botonComenzar').click(function() {
+        concatenateAndRedirect();
+    });
+</script>
+
+
+</body>
+</html>

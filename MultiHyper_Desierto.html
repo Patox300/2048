@@ -1,0 +1,1324 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Multiplayer_Hyper_Desierto</title>
+  <link rel="icon" href="Modelos/squirrel.webp" />
+  <link rel="stylesheet" href="inicio.css" />
+  <style>
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+    }
+
+    #c {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .split {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+    }
+
+    .split>div {
+      width: 100%;
+      height: 100%;
+    }
+
+    #view1 {
+      border-right-color: black;
+      border-right: 2px;
+    }
+  </style>
+</head>
+
+<body>
+  <audio autoplay>
+    <source src="Benny Hill Theme.mp3" type="audio/mpeg" />
+  </audio>
+  <canvas id="c"></canvas>
+  <div class="split">
+    <div id="view1" tabindex="1"></div>
+    <div id="view3" tabindex="3"></div>
+  </div>
+
+  <div id="PopupFinal" style="display: none">
+    <div class="finalJuego">
+      <div id="textoFinal">
+        <h3 class="centered">Game Over</h3>
+        <h1>Jugador 1: <span id="puntosJ1"></span></h1>
+        <h1>Jugador 2: <span id="puntosJ2"></span></h1>
+        <h1>Ganador: <span id="ganador"></span></h1>
+      </div>
+      <div id="botonFinal">
+        <a href="index.html"><button class="salirFinal">Salir</button></a>
+      </div>
+    </div>
+  </div>
+
+  <div id="Popup" style="display: none">
+    <div class="pausamenu">
+      <h3>Pausa</h3>
+      <div class="botones">
+        <!--<a href=""><button>Ajustes</button></a>-->
+        <button onclick="regresarPopup()">Regresar</button>
+        <a href="index.html"><button class="salir">Salir del juego</button></a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function regresarPopup() {
+      document.getElementById("Popup").style.display = "none";
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from "./Modules/three.module.js";
+    import { OrbitControls } from "./Modules/OrbitControls.js";
+    import { OBJLoader } from "./Modules/OBJLoader.js";
+    import { MTLLoader } from "./Modules/MtLLoader.js";
+
+    function main() {
+      const canvas = document.querySelector("#c");
+      const view1Elem = document.querySelector("#view1");
+      const view3Elem = document.querySelector("#view3");
+      const renderer = new THREE.WebGLRenderer({ canvas });
+
+      const fov = 60;
+      const aspect = 2;
+
+      let model1object = new THREE.Group();
+      let model2object = new THREE.Group();
+
+      let bandera1object = new THREE.Group();
+      let bandera2object = new THREE.Group();
+
+      //BoundingBoxLoader-----------------
+      const model1BB = new THREE.Box3();
+      const model2BB = new THREE.Box3();
+
+      const bandera1BB = new THREE.Box3();
+      const bandera2BB = new THREE.Box3();
+
+      const goalJ2BB = new THREE.Box3(
+        new THREE.Vector3(-130, 0, -0.5),
+        new THREE.Vector3(130, 10, 0.5)
+      );
+
+      const goalJ1BB = new THREE.Box3(
+        new THREE.Vector3(-130, 0, -0.5),
+        new THREE.Vector3(130, 10, 0.5)
+      );
+
+      let caja1;
+      let caja2;
+      let caja3;
+
+      let caja1BB; //Esta caja es la boundingBox de la caja 1
+      let caja2BB; //Esta caja es la boundingBox de la caja 2
+      let caja3BB; //Esta caja es la boundingBox de la caja 3
+
+      let posicionIniCaja1 = new THREE.Vector3(94, 1.5, -88);
+      let posicionFinCaja1 = new THREE.Vector3(11, 1.5, -30);
+
+      let posicionIniCaja2 = new THREE.Vector3(-67, 1.5, -16);
+      let posicionFinCaja2 = new THREE.Vector3(10, 1.5, 74);
+
+      let posicionIniCaja3 = new THREE.Vector3(39, 1.5, 37);
+      let posicionFinCaja3 = new THREE.Vector3(102, 1.5, -28);
+
+      const loader = new OBJLoader();
+      const textureLoader = new THREE.TextureLoader();
+
+      const keys1 = {
+        forward: false,
+        backward: false,
+        left: false,
+        right: false,
+      };
+
+      const keys2 = {
+        forward: false,
+        backward: false,
+        left: false,
+        right: false,
+      };
+
+      //Camara1
+      const camera = new THREE.PerspectiveCamera(fov, aspect);
+      camera.position.set(0, 30, -165);
+      const cameraHelper = new THREE.CameraHelper(camera);
+
+      //Camara 2
+      const camera3 = new THREE.PerspectiveCamera(fov, aspect);
+      camera3.position.set(0, 30, 165);
+      const camera3Helper = new THREE.CameraHelper(camera3);
+
+      // const controls3 = new OrbitControls(camera3, view3Elem);
+      // controls3.target.set(0, 5, 0);
+      // controls3.update();
+
+      //Escena
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color("#34495E");
+
+      scene.add(cameraHelper);
+      scene.add(camera3Helper);
+
+      //Luces
+      {
+        //Luz Direccional
+        const color = 0xffffff;
+        const intensity = 1;
+        const light = new THREE.DirectionalLight(color, intensity);
+        light.position.set(0, 10, 0);
+        light.target.position.set(-5, 0, 0);
+        scene.add(light);
+        scene.add(light.target);
+
+        //Luz Hemisferica
+        const hemisphereLight = new THREE.HemisphereLight(
+          0xffffbb,
+          0x080820,
+          1
+        );
+        scene.add(hemisphereLight);
+      }
+
+      //-----------Carga de Modelos---------------------------------------------------------------------
+
+      //Plano de Agua
+      {
+        const planeGeometry = new THREE.PlaneGeometry(50, 50);
+        const planeMaterial = new THREE.MeshStandardMaterial({
+          color: "#0C5E58",
+        });
+        const plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        plane.position.set(0, -0.5, 0);
+        plane.scale.set(5, 10);
+        plane.receiveShadow = true;
+        plane.rotateX(-Math.PI / 2);
+        scene.add(plane);
+      }
+      //Base / Cubo de J2     NO TOCAR
+      {
+        const cube1Geometry = new THREE.BoxGeometry(233, 1, 1);
+        const cube1Material = new THREE.MeshBasicMaterial({ color: "red" });
+        const cube1 = new THREE.Mesh(cube1Geometry, cube1Material);
+        cube1.position.z = 150;
+        scene.add(cube1);
+
+        goalJ2BB.translate(new THREE.Vector3(0, 0, 150));
+
+        // const goalJ2BBHelper = new THREE.Box3Helper(goalJ2BB, 0xff0000);
+        // scene.add(goalJ2BBHelper);
+      }
+      //Base / Cubo de J1     NO TOCAR
+      {
+        const cube1Geometry = new THREE.BoxGeometry(233, 1, 1);
+        const cube1Material = new THREE.MeshBasicMaterial({
+          color: 0xffff00,
+        });
+        const cube1 = new THREE.Mesh(cube1Geometry, cube1Material);
+        cube1.position.z = -150;
+        scene.add(cube1);
+
+        goalJ1BB.translate(new THREE.Vector3(0, 0, -150));
+
+        // const goalJ1BBHelper = new THREE.Box3Helper(goalJ1BB, 0xffff00);
+        // scene.add(goalJ1BBHelper);
+      }
+      {
+        const modeltex = textureLoader.load("./Modelos/ARDILLA/ardilla.jpg");
+        loader.load(
+          "./Modelos/ARDILLA/ardilla.obj",
+          function (object) {
+            model1object = object;
+            const modelmat = new THREE.MeshBasicMaterial({
+              map: modeltex,
+            });
+            model1object.traverse(function (child) {
+              if (child instanceof THREE.Mesh) {
+                child.material = modelmat;
+              }
+            });
+
+            model1object.position.set(0, 0, -160);
+            model1object.scale.set(2, 2, 2);
+
+            scene.add(model1object);
+
+            model1BB.setFromObject(model1object);
+          },
+          function (xhr) {
+            console.log((xhr.loaded / xhr.total) * 100 + "% loaded");
+          },
+          function (error) {
+            console.log("An error happened");
+          }
+        );
+      }
+      {
+        const model2Texture = textureLoader.load(
+          "./Modelos/ARDILLA/ardilla.jpg");
+        loader.load(
+          "./Modelos/ARDILLA/ardilla.obj",
+          function (object) {
+            model2object = object;
+            const model2Mat = new THREE.MeshBasicMaterial({
+              map: model2Texture,
+            });
+            model2object.traverse(function (child) {
+              if (child instanceof THREE.Mesh) {
+                child.material = model2Mat;
+              }
+            });
+
+            model2object.position.set(0, 0, 160);
+            model2object.rotation.y += 3.14159;
+            model2object.scale.set(2, 2, 2);
+
+            scene.add(model2object);
+
+            model2BB.setFromObject(model2object);
+          },
+          function (xhr) {
+            console.log((xhr.loaded / xhr.total) * 100 + "% loaded");
+          },
+          function (error) {
+            console.log("An error happened");
+          }
+        );
+      }
+      //Modelo de Item
+      {
+        const materialRojo = new THREE.MeshBasicMaterial({
+          color: "red",
+        });
+
+        const geometriaCaja = new THREE.BoxGeometry(4, 4, 4);
+
+        caja1 = new THREE.Mesh(geometriaCaja, materialRojo);
+        caja2 = new THREE.Mesh(geometriaCaja, materialRojo);
+        caja3 = new THREE.Mesh(geometriaCaja, materialRojo);
+
+        caja1.position.copy(posicionIniCaja1);
+        caja2.position.copy(posicionIniCaja2);
+        caja3.position.copy(posicionIniCaja3);
+
+        caja1BB = new THREE.Box3().setFromObject(caja1);
+        caja2BB = new THREE.Box3().setFromObject(caja2);
+        caja3BB = new THREE.Box3().setFromObject(caja3);
+
+        scene.add(caja1);
+        scene.add(caja2);
+        scene.add(caja3);
+      }
+      {
+        const modeltex = textureLoader.load(
+          "./Modelos/escenario/desierto.jpg"
+        );
+        loader.load(
+          "./Modelos/escenario/desierto.obj",
+          function (model) {
+            const modelmat = new THREE.MeshBasicMaterial({
+              map: modeltex,
+            });
+            modelmat.castShadow = true;
+            model.traverse(function (child) {
+              if (child instanceof THREE.Mesh) {
+                child.material = modelmat;
+              }
+            });
+            model.position.set(0, 0, 0);
+            model.scale.set(2,2,2);
+            scene.add(model);
+          },
+          function (xhr) {
+            console.log(
+              (xhr.loaded / xhr.total) * 100 + "% loaded"
+            );
+          },
+          function (error) {
+            console.log("An error happened");
+          }
+        );
+      }
+      {
+        const modeltex = textureLoader.load(
+          "./Modelos/escenario/cactus.jpg"
+        );
+        loader.load(
+          "./Modelos/escenario/cactus.obj",
+          function (model) {
+            const modelmat = new THREE.MeshBasicMaterial({
+              map: modeltex,
+            });
+            modelmat.castShadow = true;
+            model.traverse(function (child) {
+              if (child instanceof THREE.Mesh) {
+                child.material = modelmat;
+              }
+            });
+            model.position.set(0, 0, 0);
+            model.scale.set(2,2,2);
+            scene.add(model);
+          },
+          function (xhr) {
+            console.log(
+              (xhr.loaded / xhr.total) * 100 + "% loaded"
+            );
+          },
+          function (error) {
+            console.log("An error happened");
+          }
+        );
+      }
+      {
+        const modeltex = textureLoader.load(
+          "./Modelos/escenario/calle.jpg"
+        );
+        loader.load(
+          "./Modelos/escenario/calle.obj",
+          function (model) {
+            const modelmat = new THREE.MeshBasicMaterial({
+              map: modeltex,
+            });
+            modelmat.castShadow = true;
+            model.traverse(function (child) {
+              if (child instanceof THREE.Mesh) {
+                child.material = modelmat;
+              }
+            });
+            model.position.set(0, 0, 0);
+            model.scale.set(2,2,2);
+            scene.add(model);
+          },
+          function (xhr) {
+            console.log(
+              (xhr.loaded / xhr.total) * 100 + "% loaded"
+            );
+          },
+          function (error) {
+            console.log("An error happened");
+          }
+        );
+      }
+      //Bandera J1NO TOCAR
+      {
+        const bandera1Text = textureLoader.load(
+          "./Modelos/BANDERA_R/Bandera_Y_UV.png"
+        );
+        loader.load(
+          "./Modelos/BANDERA_R/BANDERA.obj",
+          function (object) {
+            bandera1object = object;
+            const ban1Mat = new THREE.MeshBasicMaterial({
+              map: bandera1Text,
+            });
+            bandera1object.traverse(function (child) {
+              if (child instanceof THREE.Mesh) {
+                child.material = ban1Mat;
+              }
+            });
+            bandera1object.position.set(0, 0, -180);
+            bandera1object.scale.set(5, 5, 5);
+            bandera1object.rotateY(Math.PI / 2);
+            scene.add(bandera1object);
+
+            bandera1BB.setFromObject(bandera1object);
+          },
+          function (xhr) {
+            console.log(
+              (xhr.loaded / xhr.total) * 100 + "% loaded,Bandera J1"
+            );
+          },
+          function (error) {
+            console.log("An error happened,Bandera J1");
+          }
+        );
+      }
+      {
+        const bandera2Text = textureLoader.load(
+          "./Modelos/BANDERA_R/Bandera_R_UV.png"
+        );
+        loader.load(
+          "./Modelos/BANDERA_R/BANDERA.obj",
+          function (object) {
+            bandera2object = object;
+            const ban2Mat = new THREE.MeshBasicMaterial({
+              map: bandera2Text,
+            });
+            bandera2object.traverse(function (child) {
+              if (child instanceof THREE.Mesh) {
+                child.material = ban2Mat;
+              }
+            });
+            bandera2object.position.set(0, 0, 180);
+            bandera2object.scale.set(5, 5, 5);
+            bandera2object.rotateY(Math.PI / 2);
+            scene.add(bandera2object);
+            bandera2BB.setFromObject(bandera2object);
+          },
+          function (xhr) {
+            console.log(
+              (xhr.loaded / xhr.total) * 100 + "% loaded,Bandera J2"
+            );
+          },
+          function (error) {
+            console.log("An error happened,Bandera J2");
+          }
+        );
+      }
+
+      //---Logica de movimiento------------------------------------------------------------------------------
+
+      document.addEventListener("keydown", (e) => _onKeyDown(e), false);
+      document.addEventListener("keyup", (e) => _onKeyUp(e), false);
+
+      function _onKeyDown(event) {
+        switch (event.keyCode) {
+          case 87: // w
+            keys1.forward = true;
+            break;
+          case 65: // a
+            keys1.left = true;
+            break;
+          case 83: // s
+            keys1.backward = true;
+            break;
+          case 68: // d
+            keys1.right = true;
+            break;
+
+          case 80: //p
+            console.log("Pausa ", pausa);
+            break;
+
+          //Arrow Key Up
+          case 38:
+            keys2.forward = true;
+            break;
+          //Arrow Key Down
+          case 40:
+            keys2.backward = true;
+          //Arrow Key Right
+          case 39:
+            keys2.right = true;
+            break;
+          //Arrow Key Left
+          case 37:
+            keys2.left = true;
+            break;
+        }
+      }
+
+      function _onKeyUp(event) {
+        switch (event.keyCode) {
+          case 87: // w
+            keys1.forward = false;
+            break;
+          case 65: // a
+            keys1.left = false;
+            break;
+          case 83: // s
+            keys1.backward = false;
+            break;
+          case 68: // d
+            keys1.right = false;
+            break;
+
+          case 80: // p
+            document.getElementById("Popup").style.display = "block";
+            break;
+
+          //Arrow Key Up
+          case 38:
+            keys2.forward = false;
+            break;
+          //Arrow Key Down
+          case 40:
+            keys2.backward = false;
+          //Arrow Key Right
+          case 39:
+            keys2.right = false;
+            break;
+          //Arrow Key Left
+          case 37:
+            keys2.left = false;
+            break;
+        }
+      }
+
+      function movement(_target, timeInSeconds, keys, accel) {
+        if (!_target) {
+          return;
+        }
+        let decceleration = new THREE.Vector3(-0.0005, -0.0001, -5.0);
+        let acceleration = new THREE.Vector3(1, 0.15, accel);
+        let velocity = new THREE.Vector3(0, 0, 0);
+
+        const frameDecceleration = new THREE.Vector3(
+          velocity.x * decceleration.x,
+          velocity.y * decceleration.y,
+          velocity.z * decceleration.z
+        );
+        frameDecceleration.multiplyScalar(timeInSeconds);
+        frameDecceleration.z =
+          Math.sign(frameDecceleration.z) *
+          Math.min(Math.abs(frameDecceleration.z), Math.abs(velocity.z));
+
+        velocity.add(frameDecceleration);
+        const controlObject = _target;
+        const _Q = new THREE.Quaternion();
+        const _A = new THREE.Vector3();
+        const _R = controlObject.quaternion.clone();
+
+        const acc = acceleration.clone();
+
+        if (keys.forward) {
+          velocity.z += acc.z * timeInSeconds;
+        }
+        if (keys.backward) {
+          velocity.z -= acc.z * timeInSeconds;
+        }
+        if (keys.left) {
+          _A.set(0, 1, 0);
+          _Q.setFromAxisAngle(
+            _A,
+            4.0 * Math.PI * timeInSeconds * acceleration.y
+          );
+          _R.multiply(_Q);
+        }
+        if (keys.right) {
+          _A.set(0, 1, 0);
+          _Q.setFromAxisAngle(
+            _A,
+            4.0 * -Math.PI * timeInSeconds * acceleration.y
+          );
+          _R.multiply(_Q);
+        }
+        controlObject.quaternion.copy(_R);
+
+        const oldPosition = new THREE.Vector3();
+        oldPosition.copy(controlObject.position);
+
+        const forward = new THREE.Vector3(0, 0, 1);
+        forward.applyQuaternion(controlObject.quaternion);
+        forward.normalize();
+
+        const sideways = new THREE.Vector3(1, 0, 0);
+        sideways.applyQuaternion(controlObject.quaternion);
+        sideways.normalize();
+
+        sideways.multiplyScalar(velocity.x * timeInSeconds);
+        forward.multiplyScalar(velocity.z * timeInSeconds);
+
+        controlObject.position.add(forward);
+        controlObject.position.add(sideways);
+
+        oldPosition.copy(controlObject.position);
+      }
+
+      //---Logica de Juego-----------------------------------------------------------------------------------
+
+      let puntosJ1 = 0;
+      let puntosJ2 = 0;
+
+      let bandera1Captured = false;
+      let bandera2Captured = false;
+
+      let flag2followsmodel1 = false;
+      let flag1followsmodel2 = false;
+
+      let canMove = true;
+
+      let slowEffect = false;
+      let fastEffect = false;
+
+      const flag1Originpos = new THREE.Vector3(0, 0, -180);
+      const flag2Originpos = new THREE.Vector3(0, 0, 180);
+
+      let duracionPartida = 120;
+      let tiempoRestante = duracionPartida; //Tiempo en segundos
+      let temporizador;
+      //inicia
+      const posicionesDisponibles = [
+        new THREE.Vector3(93, 1.5, 76), //1
+        new THREE.Vector3(-90, 1.5, 55), //2
+        new THREE.Vector3(-12, 1.5, -48), //3
+        new THREE.Vector3(100, 1.5, -68), //4
+        new THREE.Vector3(37, 1.5, 40), //5
+        new THREE.Vector3(-39, 1.5, 128), //6
+        new THREE.Vector3(-117, 1.5, 86), //7
+        new THREE.Vector3(-17, 1.5, -190), //8
+        new THREE.Vector3(40, 1.5, -38), //9
+        new THREE.Vector3(0, 1.5, 184), //10
+        new THREE.Vector3(-78, 1.5, -41), //11
+        new THREE.Vector3(-33, 1.5, 37), //12
+      ];
+      let cajaVerdePos1 = new THREE.Vector3(40, 1.5, -173);
+      let cajaVerdePos2 = new THREE.Vector3(-40, 1.5, 173);
+      let cajaMoradaPos1 = new THREE.Vector3(-40, 1.5, -173);
+      let cajaMoradaPos2 = new THREE.Vector3(40, 1.5, 173);
+      let cajasrespawn = 0;
+      let mainBox;
+      let cajaVerde1;
+      let cajaVerde2;
+      let cajaMorada1;
+      let cajaMorada2;
+
+
+      let mainBoxBB = new THREE.Box3();
+      let cajaVerde1BB = new THREE.Box3();
+      let cajaVerde2BB = new THREE.Box3();
+      let cajaMorada1BB = new THREE.Box3();
+      let cajaMorada2BB = new THREE.Box3();
+
+
+      let VBox1Status = true;
+      let VBox2Status = true;
+      let MBox1Status = true;
+      let MBox2Status = true;
+      {
+        const boxGeometry = new THREE.BoxGeometry(4, 4, 4);
+
+        // Dentro de la sección donde defines tus objetos
+        const boxMaterial = new THREE.MeshBasicMaterial({
+          color: 0xffa500,
+        });
+
+        mainBox = new THREE.Mesh(boxGeometry, boxMaterial);
+
+        mainBox.position.copy(
+          posicionesDisponibles[
+          Math.floor(Math.random() * posicionesDisponibles.length)
+          ]
+        );
+
+        mainBox.name = "mainBox";
+
+        scene.add(mainBox);
+
+        mainBoxBB.setFromObject(mainBox);
+
+        const gBoxMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+
+        cajaVerde1 = new THREE.Mesh(boxGeometry, gBoxMat);
+        cajaVerde2 = new THREE.Mesh(boxGeometry, gBoxMat);
+
+        cajaVerde1.position.copy(cajaVerdePos1);
+        cajaVerde2.position.copy(cajaVerdePos2);
+
+        cajaVerde1.name = "cajaVerde1";
+        cajaVerde2.name = "cajaVerde2";
+
+        scene.add(cajaVerde1, cajaVerde2);
+
+        cajaVerde1BB.setFromObject(cajaVerde1);
+        cajaVerde2BB.setFromObject(cajaVerde2);
+
+        const pBoxMat = new THREE.MeshBasicMaterial({ color: 0xff00ff });
+
+        cajaMorada1 = new THREE.Mesh(boxGeometry, pBoxMat);
+        cajaMorada2 = new THREE.Mesh(boxGeometry, pBoxMat);
+
+        cajaMorada1.position.copy(cajaMoradaPos1);
+        cajaMorada2.position.copy(cajaMoradaPos2);
+
+        cajaMorada1.name = "cajaMorada1";
+        cajaMorada2.name = "cajaMorada2";
+
+        scene.add(cajaMorada1, cajaMorada2);
+
+        cajaMorada1BB.setFromObject(cajaMorada1);
+        cajaMorada2BB.setFromObject(cajaMorada2);
+      }
+      //termina
+      caja1.name = "caja1";
+      caja2.name = "caja2";
+      caja3.name = "caja3";
+
+      let Box1Status = true;
+      let Box2Status = true;
+      let Box3Status = true;
+
+      const nrmlAccel = 3000;
+      const fastAccel = 5000;
+      const slowAccel = 1000;
+
+      let model1Accel = nrmlAccel;
+      let model2Accel = nrmlAccel;
+
+      let fastmodel = 0;
+      let slowmodel = 0;
+
+      let fastTick = 0;
+      let slowTick = 0;
+
+      function slowTarget(modelAccel, id) {
+        let newmodelAccel = modelAccel;
+
+        newmodelAccel = slowAccel;
+        slowmodel = id;
+        slowEffect = true;
+
+        return newmodelAccel;
+      }
+
+      function fastTarget(modelAccel, id) {
+        let newmodelAccel = modelAccel;
+
+        newmodelAccel = fastAccel;
+        fastmodel = id;
+        fastEffect = true;
+
+        return newmodelAccel;
+      }
+
+      function resetAccel(modelAccel) {
+        modelAccel = nrmlAccel;
+
+        if (fastEffect) {
+          fastEffect = false;
+          fastmodel = 0;
+        }
+
+        if (slowEffect) {
+          slowEffect = false;
+          slowmodel = 0;
+        }
+
+        return modelAccel;
+      }
+
+      function slowEffectTimer() {
+        if (slowEffect) {
+          if (slowTick >= 10) {
+            model1Accel = slowmodel === 1 ? resetAccel(model1Accel) : model1Accel;
+            model2Accel = slowmodel === 2 ? resetAccel(model2Accel) : model2Accel;
+
+            slowEffect = false;
+            slowTick = 0;
+          } else {
+            slowTick++;
+          }
+        }
+      }
+
+      function fastEffectTimer() {
+        if (fastEffect) {
+          if (fastTick >= 20) {
+            model1Accel = fastmodel === 1 ? resetAccel(model1Accel) : model1Accel;
+            model2Accel = fastmodel === 2 ? resetAccel(model2Accel) : model2Accel;
+
+            fastEffect = false;
+            fastTick = 0;
+          } else {
+            fastTick++;
+          }
+        }
+      }
+
+      function boxRespawn() {
+        if (cajasrespawn >= 30) {
+          resetBox();
+          cajasrespawn = 0;
+        } else {
+          cajasrespawn++;
+        }
+      }
+
+      function iniciarTemporizador() {
+        temporizador = setInterval(function () {
+          tiempoRestante--;
+
+          slowEffectTimer();
+          fastEffectTimer();
+          boxRespawn();
+        }, 1000);
+      }
+
+      function moveBox(box) {
+        if (box.name == "caja1" && Box1Status) {
+          caja1.position.set(300, 0, 300);
+          caja1BB.setFromObject(caja1);
+          Box1Status = false;
+        }
+        if (box.name == "caja2" && Box2Status) {
+          caja2.position.set(300, 0, 300);
+          caja2BB.setFromObject(caja2);
+          Box2Status = false;
+        }
+        if (box.name == "caja3" && Box3Status) {
+          caja3.position.set(300, 0, 300);
+          caja3BB.setFromObject(caja3);
+          Box3Status = false;
+        }
+        if (box.name == "cajaVerde1") {
+          cajaVerde1.position.set(300, 0, 300);
+          cajaVerde1BB.setFromObject(cajaVerde1);
+          VBox1Status = false;
+        }
+        if (box.name == "cajaVerde2") {
+          cajaVerde2.position.set(300, 0, 300);
+          cajaVerde2BB.setFromObject(cajaVerde2);
+          VBox2Status = false;
+        }
+        if (box.name == "cajaMorada1") {
+          cajaMorada1.position.set(300, 0, 300);
+          cajaMorada1BB.setFromObject(cajaMorada1);
+          MBox1Status = false;
+        }
+        if (box.name == "cajaMorada2") {
+          cajaMorada2.position.set(300, 0, 300);
+          cajaMorada2BB.setFromObject(cajaMorada2);
+          MBox2Status = false;
+        }
+        if (box.name == "mainBox") {
+          mainBox.position.copy(
+            posicionesDisponibles[
+            Math.floor(Math.random() * posicionesDisponibles.length)
+            ]
+          );
+          mainBoxBB.setFromObject(mainBox);
+        }
+      }
+
+      function resetBox() {
+        console.log("Se reiniciaron las cajas");
+
+
+        V1BoxStatus = true;
+        V2BoxStatus = true;
+        M1BoxStatus = true;
+        M2BoxStatus = true;
+        cajaVerde1.position.copy(cajaVerdePos1);
+        cajaVerde2.position.copy(cajaVerdePos2);
+
+        cajaVerde1BB.setFromObject(cajaVerde1);
+        cajaVerde2BB.setFromObject(cajaVerde2);
+
+        cajaMorada1.position.copy(cajaMoradaPos1);
+        cajaMorada2.position.copy(cajaMoradaPos2);
+        cajaMorada1BB.setFromObject(cajaMorada1);
+        cajaMorada2BB.setFromObject(cajaMorada2);
+
+        Box1Status = true;
+        Box2Status = true;
+        Box3Status = true;
+
+        caja1.position.copy(posicionIniCaja1);
+        caja2.position.copy(posicionIniCaja2);
+        caja3.position.copy(posicionIniCaja3);
+
+        caja1BB.setFromObject(caja1);
+        caja2BB.setFromObject(caja2);
+        caja3BB.setFromObject(caja3);
+      }
+
+      function formatTime(tiempoSegundos) {
+        let minutos = Math.floor(tiempoSegundos / 60);
+        let segundos = tiempoSegundos % 60;
+        return `${minutos}:${segundos < 10 ? "0" : ""}${segundos}`;
+      }
+
+      function followmodel(flagObject, modelObject) {
+        flagObject.position.copy(modelObject.position);
+        flagObject.rotation.copy(modelObject.rotation);
+        flagObject.rotation.y += Math.PI;
+      }
+
+      function resetFlagPos(flagObject, originalPosition) {
+        flagObject.position.copy(originalPosition);
+        flagObject.rotation.set(0, 0, 0);
+        flagObject.rotateY(Math.PI / 2);
+      }
+
+      // Cargar los sonidos
+      const coinSound = new Audio('Mario Coin Sound - Sound Effect (HD).mp3');
+      const powerDownSound = new Audio('Super Mario Power Down Sound Effect.mp3');
+      const powerUpSound = new Audio('MARIO POWER UP - SOUND EFFECT.mp3');
+      function checkCollisions() {
+        if (model1BB.intersectsBox(bandera2BB) && !bandera2Captured) {
+          bandera2Captured = true;
+          console.log("La bandera roja está en posesión del equipo azul");
+          flag2followsmodel1 = true;
+        }
+        if (model2BB.intersectsBox(bandera1BB) && !bandera1Captured) {
+          bandera1Captured = true;
+          console.log("La bandera azul está en posesión del equipo rojo");
+          flag1followsmodel2 = true;
+        }
+        if (model1BB.intersectsBox(goalJ1BB) && bandera2Captured) {
+          bandera2Captured = false;
+          puntosJ1++;
+          console.log(
+            "La bandera roja ha sido capturada! \n Puntuación: azul= ",
+            puntosJ1,
+            ", Rojo= ",
+            puntosJ2,
+            " ."
+          );
+          flag2followsmodel1 = false;
+          resetFlagPos(bandera2object, flag2Originpos);
+          coinSound.play(); // Sonido al ganar un punto
+        }
+        if (model2BB.intersectsBox(goalJ2BB) && bandera1Captured) {
+          bandera1Captured = false;
+          puntosJ2++;
+          console.log(
+            "La bandera azul ha sido capturada! \n Puntuación: azul= ",
+            puntosJ1,
+            ", Rojo= ",
+            puntosJ2,
+            " ."
+          );
+          flag1followsmodel2 = false;
+          resetFlagPos(bandera1object, flag1Originpos);
+          coinSound.play(); // Sonido al ganar un punto
+        }
+        if (flag1followsmodel2) {
+          followmodel(bandera1object, model2object);
+        }
+        if (flag2followsmodel1) {
+          followmodel(bandera2object, model1object);
+        }
+        if (model1BB.intersectsBox(caja1BB)) {
+          console.log("Punto disminuido para el equipo azul!");
+          moveBox(caja1);
+          puntosJ1--;
+          powerDownSound.play(); // Sonido al perder un punto
+        }
+        if (model1BB.intersectsBox(caja2BB)) {
+          console.log("Punto disminuido para el equipo azul!");
+          moveBox(caja2);
+          puntosJ1--;
+          powerDownSound.play(); // Sonido al perder un punto
+        }
+        if (model1BB.intersectsBox(caja3BB)) {
+          console.log("Punto disminuido para el equipo azul!");
+          moveBox(caja3);
+          puntosJ1--;
+          powerDownSound.play(); // Sonido al perder un punto
+        }
+        if (model2BB.intersectsBox(caja1BB)) {
+          console.log("Punto disminuido para el equipo Rojo!");
+          moveBox(caja1);
+          puntosJ2--;
+          powerDownSound.play(); // Sonido al perder un punto
+        }
+        if (model2BB.intersectsBox(caja2BB)) {
+          console.log("Punto disminuido para el equipo Rojo!");
+          moveBox(caja2);
+          puntosJ2--;
+          powerDownSound.play(); // Sonido al perder un punto
+        }
+        if (model2BB.intersectsBox(caja3BB)) {
+          console.log("Punto disminuido para el equipo Rojo!");
+          moveBox(caja3);
+          puntosJ2--;
+          powerDownSound.play(); // Sonido al perder un punto
+        }
+        if (model1BB.intersectsBox(cajaVerde1BB)) {
+          console.log("Speed UP!");
+          moveBox(cajaVerde1);
+          model1Accel = fastTarget(model1Accel);
+          powerUpSound.play(); // Sonido al aumentar velocidad
+        }
+
+        if (model1BB.intersectsBox(cajaVerde2BB)) {
+          console.log("Speed UP!");
+          moveBox(cajaVerde2);
+          model1Accel = fastTarget(model1Accel);
+          powerUpSound.play();  // Sonido al aumentar velocidad
+        }
+        if (model1BB.intersectsBox(mainBoxBB)) {
+          moveBox(mainBox);
+          bandera1Captured = false;
+          flag1followsmodel2 = false;
+          resetFlagPos(bandera1object, flag1Originpos);
+
+          console.log("Puntuación:", puntosJ1);
+          coinSound.play(); // Sonido al ganar un punto
+        }
+        if (model2BB.intersectsBox(cajaVerde1BB)) {
+          console.log("Speed UP!");
+          moveBox(cajaVerde1);
+          model2Accel = fastTarget(model2Accel);
+          powerUpSound.play();  // Sonido al aumentar velocidad
+        }
+        if (model2BB.intersectsBox(cajaVerde2BB)) {
+          console.log("Speed UP!");
+          moveBox(cajaVerde2);
+          model2Accel = fastTarget(model2Accel);
+          powerUpSound.play();  // Sonido al aumentar velocidad
+        }
+        if (model2BB.intersectsBox(mainBoxBB)) {
+          moveBox(mainBox);
+          bandera2Captured = false;
+          flag2followsmodel1 = false;
+          resetFlagPos(bandera2object, flag2Originpos);
+
+          console.log("Puntuación:", puntosJ1);
+          coinSound.play(); // Sonido al ganar un punto
+        }
+        if (model1BB.intersectsBox(cajaMorada1BB)) {
+          console.log("Slow oponente!");
+          moveBox(cajaMorada1);
+          model2Accel = slowTarget(model2Accel);
+          powerUpSound.play();  // Sonido al aumentar velocidad
+        }
+        if (model1BB.intersectsBox(cajaMorada2BB)) {
+          console.log("Slow oponente!");
+          moveBox(cajaMorada2);
+          model2Accel = slowTarget(model2Accel);
+          powerUpSound.play();  // Sonido al aumentar velocidad
+        }
+        if (model2BB.intersectsBox(cajaMorada1BB)) {
+          console.log("Slow oponente!");
+          moveBox(cajaMorada1);
+          model1Accel = slowTarget(model1Accel);
+          powerUpSound.play();  // Sonido al aumentar velocidad
+        }
+        if (model2BB.intersectsBox(cajaMorada2BB)) {
+          console.log("Slow oponente!");
+          moveBox(cajaMorada2);
+          model1Accel = slowTarget(model1Accel);
+          powerUpSound.play();  // Sonido al aumentar velocidad
+        }
+      }
+
+      let msg;
+
+      function printWinner() {
+        if (puntosJ1 > puntosJ2) {
+          msg = "¡azul HA GANADO!";
+        }
+        if (puntosJ2 > puntosJ1) {
+          msg = "¡ROJO HA GANADO!";
+        }
+        if (puntosJ1 == puntosJ2) {
+          msg = "¡EMPATE!";
+        }
+      }
+
+      function gameLogic() {
+        if (tiempoRestante >= 0) {
+          console.log("Tiempo restante: " + formatTime(tiempoRestante));
+          checkCollisions();
+        } else {
+          clearInterval(temporizador);
+          temporizador = undefined;
+          canMove = false;
+          printWinner();
+          // Asignar valores a los elementos HTML
+          document.getElementById("puntosJ1").innerText = puntosJ1;
+          document.getElementById("puntosJ2").innerText = puntosJ2;
+          document.getElementById("ganador").innerText = msg;
+          document.getElementById("PopupFinal").style.display = "block";
+        }
+      }
+
+      iniciarTemporizador();
+
+      //---Logica de Render----------------------------------------------------------------------------------
+      function resizeRendererToDisplaySize(renderer) {
+        const canvas = renderer.domElement;
+        const width = canvas.clientWidth;
+        const height = canvas.clientHeight;
+        const needResize = canvas.width !== width || canvas.height !== height;
+        if (needResize) {
+          renderer.setSize(width, height, false);
+        }
+        return needResize;
+      }
+
+      function setScissorForElement(elem) {
+        const canvasRect = canvas.getBoundingClientRect();
+        const elemRect = elem.getBoundingClientRect();
+
+        // compute a canvas relative rectangle
+        const right =
+          Math.min(elemRect.right, canvasRect.right) - canvasRect.left;
+        const left = Math.max(0, elemRect.left - canvasRect.left);
+        const bottom =
+          Math.min(elemRect.bottom, canvasRect.bottom) - canvasRect.top;
+        const top = Math.max(0, elemRect.top - canvasRect.top);
+
+        const width = Math.min(canvasRect.width, right - left);
+        const height = Math.min(canvasRect.height, bottom - top);
+
+        // setup the scissor to only render to that part of the canvas
+        const positiveYUpBottom = canvasRect.height - bottom;
+        renderer.setScissor(left, positiveYUpBottom, width, height);
+        renderer.setViewport(left, positiveYUpBottom, width, height);
+
+        // return the aspect
+        return width / height;
+      }
+
+      function updateCamera(camera, model) {
+        const modelDirection = new THREE.Vector3(0, 0, 1);
+
+        modelDirection.applyQuaternion(model.quaternion);
+        modelDirection.normalize();
+
+        const cameraDistance = 20;
+
+        const cameraHeight = 10;
+
+        const cameraPosition = model.position
+          .clone()
+          .addScaledVector(modelDirection, -cameraDistance)
+          .add(new THREE.Vector3(0, cameraHeight, 0));
+        camera.position.copy(cameraPosition);
+        camera.lookAt(model.position);
+      }
+
+      function girarCajas() {
+        let intervalo = 0.1;
+        caja1.rotation.y += intervalo;
+        caja2.rotation.y += intervalo;
+        caja3.rotation.y += intervalo;
+      }
+
+      let tiempo = 0;
+      const velCajas = 0.2;
+
+      function animarCajas() {
+        tiempo += velCajas;
+
+        // Mueve la caja1
+        if (Box1Status) {
+          caja1.position.x = THREE.MathUtils.lerp(
+            posicionIniCaja1.x,
+            posicionFinCaja1.x,
+            (Math.sin(tiempo) + 1) / 2
+          );
+          caja1.position.z = THREE.MathUtils.lerp(
+            posicionIniCaja1.z,
+            posicionFinCaja1.z,
+            (Math.sin(tiempo) + 1) / 2
+          );
+
+          caja1BB.setFromObject(caja1);
+        }
+
+        // Mueve la caja2
+        if (Box2Status) {
+          caja2.position.x = THREE.MathUtils.lerp(
+            posicionIniCaja2.x,
+            posicionFinCaja2.x,
+            (Math.sin(tiempo) + 1) / 2
+          );
+          caja2.position.z = THREE.MathUtils.lerp(
+            posicionIniCaja2.z,
+            posicionFinCaja2.z,
+            (Math.sin(tiempo) + 1) / 2
+          );
+          caja2BB.setFromObject(caja2);
+        }
+
+        //Mueve la caja3
+        if (Box3Status)
+          caja3.position.x = THREE.MathUtils.lerp(
+            posicionIniCaja3.x,
+            posicionFinCaja3.x,
+            (Math.sin(tiempo) + 1) / 2
+          );
+        caja3.position.z = THREE.MathUtils.lerp(
+          posicionIniCaja3.z,
+          posicionFinCaja3.z,
+          (Math.sin(tiempo) + 1) / 2
+        );
+        caja3BB.setFromObject(caja3);
+      }
+
+      //Funcion principal de renderizado-------------------------
+      function render() {
+        resizeRendererToDisplaySize(renderer);
+
+        // turn on the scissor
+        renderer.setScissorTest(true);
+
+        animarCajas();
+        girarCajas();
+
+        // render the original view
+        {
+          const aspect = setScissorForElement(view1Elem);
+
+          // adjust the camera for this aspect
+          camera.aspect = aspect;
+          camera.updateProjectionMatrix();
+          cameraHelper.update();
+
+          // don't draw the camera helper in the original view
+          cameraHelper.visible = false;
+          camera3Helper.visible = false;
+
+          scene.background.set("#34495E");
+
+          // render
+          renderer.render(scene, camera);
+        }
+
+        // render the offset view
+        {
+          const aspect = setScissorForElement(view3Elem);
+
+          // adjust the camera for this aspect
+          camera3.aspect = aspect;
+          camera3.updateProjectionMatrix();
+          camera3Helper.update();
+
+          // don't draw the camera helper in the original view
+          cameraHelper.visible = false;
+          camera3Helper.visible = false;
+
+          scene.background.set("#34495E");
+
+          // render
+          renderer.render(scene, camera3);
+        }
+
+        if (model1object) {
+          updateCamera(camera, model1object);
+        }
+
+        if (model2object) {
+          updateCamera(camera3, model2object);
+        }
+
+        if (canMove) {
+          movement(model1object, 0.016, keys1, model1Accel);
+          movement(model2object, 0.016, keys2, model2Accel);
+        }
+
+        //Actualizar los movimientos de las cajas
+        model1BB.setFromObject(model1object);
+        model2BB.setFromObject(model2object);
+
+        gameLogic();
+
+        requestAnimationFrame(render);
+      }
+
+      requestAnimationFrame(render);
+    }
+    main();
+  </script>
+</body>
+
+</html>
