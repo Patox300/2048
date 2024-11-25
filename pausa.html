@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pausa</title>
+
+    <link rel="stylesheet" href="inicio.css">
+</head>
+
+<body id="pausa">
+
+    <div id="Popup" style="display:none;">
+        <div class="pausamenu">
+            <h3>Pausa</h3>
+            <div class="botones">
+                <button>Ajustes</button>
+                <button>Regresar</button>
+                <button class="salir">Salir</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function _onKeyUp(event) {
+            switch (event.keyCode) {
+                case 80: // p
+                    document.getElementById('Popup').style.display = "block";
+                    $('#Popup').modal({ backdrop: 'static', keyboard: false })
+                    break;
+            }
+        }
+
+
+        document.addEventListener("keyup", (e) => _onKeyUp(e), false);
+
+        function _onKeyDown(event) {
+            switch (event.keyCode) {
+                case 80: // p
+
+                    break;
+            }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Solo_Nieve</title>
+  <link rel="icon" href="Modelos/squirrel.webp" />
+  <link rel="stylesheet" href="inicio.css" />
+  <style>
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+    }
+
+    #c {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+  <audio autoplay>
+    <source src="Benny Hill Theme.mp3" type="audio/mpeg" />
+  </audio>
+
+  <canvas id="c"></canvas>
+
+  <div id="PopupFinal" style="display: none">
+    <div class="finalJuego">
+      <div id="textoFinal">
+        <h3 class="centered">Game Over</h3>
+        <h1>Puntaje final: <span id="puntosJ1"></span></h1>
+        <input type="hidden" id="points" />
+        <input type="text" id="nombreJ" class="nombreJugador" placeholder="Escribe tu nombre..." />
+      </div>
+      <div id="botonFinal">
+        <button onclick="mandarInfo()" class="salirFinal">
+          Enviar y salir
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+
+  <div id="Popup" style="display: none">
+    <div class="pausamenu">
+      <h3>Pausa</h3>
+      <div class="botones">
+        <!--<a href=""><button>Ajustes</button></a>-->
+        <button onclick="regresarPopup()">Regresar</button>
+        <a href="index.html"><button class="salir">Salir del juego</button></a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function regresarPopup() {
+      document.getElementById("Popup").style.display = "none";
+    }
+    function mandarInfo() {
+      nombreJugador = document.getElementById("nombreJ").value;
+      puntuacion = document.getElementById("points").value;
+
+      var formData = new FormData();
+      formData.append("jugador", nombreJugador);
+      formData.append("puntuacion", puntuacion);
+
+      var xhr = new XMLHttpRequest();
+
+      xhr.open("POST", "./php/send_puntuaciones.php", true);
+
+      console.log(formData);
+
+      xhr.onload = function () {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          var jsonResponse = JSON.parse(xhr.responseText);
+
+          if (jsonResponse.success) {
+            console.log("Operación exitosa:", jsonResponse.message);
+            window.location.href = 'index.html';
+          } else {
+            console.error("Error en la operación:", jsonResponse.message);
+          }
+        } else {
+          console.error("Error en la solicitud AJAX:", xhr.statusText);
+        }
+      };
+
+      xhr.onerror = function () {
+        console.error("Error en la solicitud AJAX.");
+      };
+
+      xhr.send(formData);
+    }
+  </script>
+
+  <script type="module">
+    import * as THREE from "./Modules/three.module.js";
+    import { OrbitControls } from "./Modules/OrbitControls.js";
+    import { OBJLoader } from "./Modules/OBJLoader.js";
+    import { MTLLoader } from "./Modules/MtLLoader.js";
+
+    function main() {
+      const canvas = document.querySelector("#c");
+      const renderer = new THREE.WebGLRenderer({ canvas });
+
+      const fov = 60;
+      const aspect = 2;
+
+      let model1object = new THREE.Group();
+      const model1BB = new THREE.Box3();
+      const loader = new OBJLoader();
+      const textureLoader = new THREE.TextureLoader();
+
+      const keys1 = {
+        forward: false,
+        backward: false,
+        left: false,
+        right: false,
+      };
+
+      //Camara1
+      const camera = new THREE.PerspectiveCamera(fov, aspect);
+      camera.position.set(0, 30, -165);
+      const cameraHelper = new THREE.CameraHelper(camera);
+
+      //Escena
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color("#34495E");
+
+      // const controls3 = new OrbitControls(camera3, view3Elem);
+      // controls3.target.set(0, 5, 0);
+      // controls3.update();
+
+      //Luces
+      {
+        //Luz Direccional
+        const color = 0xffffff;
+        const intensity = 1;
+        const light = new THREE.DirectionalLight(color, intensity);
+        light.position.set(0, 10, 0);
+        light.target.position.set(-5, 0, 0);
+        scene.add(light);
+        scene.add(light.target);
+
+        //Luz Hemisferica
+        const hemisphereLight = new THREE.HemisphereLight(
+          0xffffbb,
+          0x080820,
+          1
+        );
+        scene.add(hemisphereLight);
+      }
+
+      //-----------Carga de Modelos---------------------------------------------------------------------
+
+      {
+        const model1Texture = textureLoader.load("./Modelos/ARDILLA/ardilla.jpg");
+        loader.load(
+          "./Modelos/ARDILLA/ardilla.obj",
+          function (object) {
+            model1object = object;
+            const model1Mat = new THREE.MeshBasicMaterial({
+              map: model1Texture,
+            });
+            model1object.traverse(function (child) {
+              if (child instanceof THREE.Mesh) {
+                child.material = model1Mat;
+              }
+            });
+
+            model1object.position.set(0, 0, 0);
+            model1object.scale.set(2, 2, 2);
+
+            scene.add(model1object);
+
+            //model1BoundingBox
+            model1BB.setFromObject(model1object);
+            // const model1BBHelper = new THREE.Box3Helper(model1BB, 0xffff00);
+            // scene.add(model1BBHelper);
+          },
+          function (xhr) {
+            console.log((xhr.loaded / xhr.total) * 100 + "% loaded,model1");
+          },
+          function (error) {
+            console.log("An error happened,model1");
+          }
+        );
+      }
+      {
+        const modeltex = textureLoader.load("./Modelos/escenario/nieve.jpg");
+        loader.load(
+          "./Modelos/escenario/escenario.obj",
+          function (model) {
+            const modelmat = new THREE.MeshBasicMaterial({
+              map: modeltex,
+            });
+            modelmat.castShadow = true;
+            model.traverse(function (child) {
+              if (child instanceof THREE.Mesh) {
+                child.material = modelmat;
+              }
+            });
+            model.position.set(0, 0, 0);
+            model.scale.set(2,2,2);
+            scene.add(model);
+          },
+          function (xhr) {
+            console.log(
+              (xhr.loaded / xhr.total) * 100 + "% loaded"
+            );
+          },
+          function (error) {
+            console.log("An error happened");
+          }
+        );
+      }
+      {
+        const modeltex = textureLoader.load("./Modelos/escenario/pino.jpg");
+        loader.load(
+          "./Modelos/escenario/pino.obj",
+          function (model) {
+            const modelmat = new THREE.MeshBasicMaterial({
+              map: modeltex,
+            });
+            modelmat.castShadow = true;
+            model.traverse(function (child) {
+              if (child instanceof THREE.Mesh) {
+                child.material = modelmat;
+              }
+            });
+            model.position.set(0, 0, 0);
+            model.scale.set(2,2,2);
+            scene.add(model);
+          },
+          function (xhr) {
+            console.log(
+              (xhr.loaded / xhr.total) * 100 + "% loaded"
+            );
+          },
+          function (error) {
+            console.log("An error happened");
+          }
+        );
+      }
+      //---Logica de movimiento------------------------------------------------------------------------------
+
+      document.addEventListener("keydown", (e) => _onKeyDown(e), false);
+      document.addEventListener("keyup", (e) => _onKeyUp(e), false);
+
+      function _onKeyDown(event) {
+        switch (event.keyCode) {
+          case 87: // w
+            keys1.forward = true;
+            break;
+          case 65: // a
+            keys1.left = true;
+            break;
+          case 83: // s
+            keys1.backward = true;
+            break;
+          case 68: // d
+            keys1.right = true;
+            break;
+
+          //Arrow Key Up
+          case 38:
+            keys2.forward = true;
+            break;
+          //Arrow Key Down
+          case 40:
+            keys2.backward = true;
+          //Arrow Key Right
+          case 39:
+            keys2.right = true;
+            break;
+          //Arrow Key Left
+          case 37:
+            keys2.left = true;
+            break;
+        }
+      }
+
+      function _onKeyUp(event) {
+        switch (event.keyCode) {
+          case 87: // w
+            keys1.forward = false;
+            break;
+          case 65: // a
+            keys1.left = false;
+            break;
+          case 83: // s
+            keys1.backward = false;
+            break;
+          case 68: // d
+            keys1.right = false;
+            break;
+
+          case 80: // p
+            document.getElementById("Popup").style.display = "block";
+            break;
+
+          //Arrow Key Up
+          case 38:
+            keys2.forward = false;
+            break;
+          //Arrow Key Down
+          case 40:
+            keys2.backward = false;
+          //Arrow Key Right
+          case 39:
+            keys2.right = false;
+            break;
+          //Arrow Key Left
+          case 37:
+            keys2.left = false;
+            break;
+        }
+      }
+
+      function movement(_target, timeInSeconds, keys, accel) {
+        if (!_target) {
+          return;
+        }
+        let decceleration = new THREE.Vector3(-0.0005, -0.0001, -5.0);
+        let acceleration = new THREE.Vector3(1, 0.15, accel);
+        let velocity = new THREE.Vector3(0, 0, 0);
+
+        const frameDecceleration = new THREE.Vector3(
+          velocity.x * decceleration.x,
+          velocity.y * decceleration.y,
+          velocity.z * decceleration.z
+        );
+        frameDecceleration.multiplyScalar(timeInSeconds);
+        frameDecceleration.z =
+          Math.sign(frameDecceleration.z) *
+          Math.min(Math.abs(frameDecceleration.z), Math.abs(velocity.z));
+
+        velocity.add(frameDecceleration);
+        const controlObject = _target;
+        const _Q = new THREE.Quaternion();
+        const _A = new THREE.Vector3();
+        const _R = controlObject.quaternion.clone();
+
+        const acc = acceleration.clone();
+
+        if (keys.forward) {
+          velocity.z += acc.z * timeInSeconds;
+        }
+        if (keys.backward) {
+          velocity.z -= acc.z * timeInSeconds;
+        }
+        if (keys.left) {
+          _A.set(0, 1, 0);
+          _Q.setFromAxisAngle(
+            _A,
+            4.0 * Math.PI * timeInSeconds * acceleration.y
+          );
+          _R.multiply(_Q);
+        }
+        if (keys.right) {
+          _A.set(0, 1, 0);
+          _Q.setFromAxisAngle(
+            _A,
+            4.0 * -Math.PI * timeInSeconds * acceleration.y
+          );
+          _R.multiply(_Q);
+        }
+        controlObject.quaternion.copy(_R);
+
+        const oldPosition = new THREE.Vector3();
+        oldPosition.copy(controlObject.position);
+
+        const forward = new THREE.Vector3(0, 0, 1);
+        forward.applyQuaternion(controlObject.quaternion);
+        forward.normalize();
+
+        const sideways = new THREE.Vector3(1, 0, 0);
+        sideways.applyQuaternion(controlObject.quaternion);
+        sideways.normalize();
+
+        sideways.multiplyScalar(velocity.x * timeInSeconds);
+        forward.multiplyScalar(velocity.z * timeInSeconds);
+
+        controlObject.position.add(forward);
+        controlObject.position.add(sideways);
+
+        oldPosition.copy(controlObject.position);
+      }
+
+      //---Logica de Juego-----------------------------------------------------------------------------------
+
+      let puntosJ1 = 0;
+
+      let canMove = true;
+
+      let duracionPartida = 90;
+      let tiempoRestante = duracionPartida; //Tiempo en segundos
+      let temporizador;
+
+      const nrmlAccel = 3000;
+      const fastAccel = 5000;
+
+      let model1Accel = nrmlAccel;
+
+      let fastTick = 0;
+      let fastEffect = false;
+
+      const posicionesDisponibles = [
+        new THREE.Vector3(93, 1.5, 76), //1
+        new THREE.Vector3(-90, 1.5, 55), //2
+        new THREE.Vector3(-12, 1.5, -48), //3
+        new THREE.Vector3(100, 1.5, -68), //4
+        new THREE.Vector3(37, 1.5, 40), //5
+        new THREE.Vector3(-39, 1.5, 128), //6
+        new THREE.Vector3(-117, 1.5, 86), //7
+        new THREE.Vector3(-17, 1.5, -190), //8
+        new THREE.Vector3(40, 1.5, -38), //9
+        new THREE.Vector3(0, 1.5, 184), //10
+        new THREE.Vector3(-78, 1.5, -41), //11
+        new THREE.Vector3(-33, 1.5, 37), //12
+      ];
+
+      let cajaVerdePos1 = new THREE.Vector3(40, 1.5, -173);
+      let cajaVerdePos2 = new THREE.Vector3(-40, 1.5, 173);
+
+      //Definicon de Cubos
+
+      let mainBox;
+      let cajaVerde1;
+      let cajaVerde2;
+
+      let mainBoxBB = new THREE.Box3();
+      let cajaVerde1BB = new THREE.Box3();
+      let cajaVerde2BB = new THREE.Box3();
+
+      let cajasrespawn = 0;
+      let VBox1Status = true;
+      let VBox2Status = true;
+
+      //Definicion de cajaVerde y mainBox
+      {
+        const boxGeometry = new THREE.BoxGeometry(4, 4, 4);
+
+        // Dentro de la sección donde defines tus objetos
+        const boxMaterial = new THREE.MeshBasicMaterial({
+          color: 0xffa500,
+        });
+
+        mainBox = new THREE.Mesh(boxGeometry, boxMaterial);
+
+        mainBox.position.copy(
+          posicionesDisponibles[
+          Math.floor(Math.random() * posicionesDisponibles.length)
+          ]
+        );
+
+        mainBox.name = "mainBox";
+
+        scene.add(mainBox);
+
+        mainBoxBB.setFromObject(mainBox);
+
+        const gBoxMat = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
+
+        cajaVerde1 = new THREE.Mesh(boxGeometry, gBoxMat);
+        cajaVerde2 = new THREE.Mesh(boxGeometry, gBoxMat);
+
+        cajaVerde1.position.copy(cajaVerdePos1);
+        cajaVerde2.position.copy(cajaVerdePos2);
+
+        cajaVerde1.name = "cajaVerde1";
+        cajaVerde2.name = "cajaVerde2";
+
+        scene.add(cajaVerde1, cajaVerde2);
+
+        cajaVerde1BB.setFromObject(cajaVerde1);
+        cajaVerde2BB.setFromObject(cajaVerde2);
+      }
+
+      function fastTarget(modelAccel) {
+        let newmodelAccel = modelAccel;
+
+        newmodelAccel = fastAccel;
+        fastEffect = true;
+
+        return newmodelAccel;
+      }
+
+      function fastEffectTimer() {
+        if (fastEffect) {
+          if (fastTick >= 20) {
+            model1Accel = resetAccel(model1Accel);
+            fastEffect = false;
+            fastTick = 0;
+          } else {
+            fastTick++;
+          }
+        }
+      }
+
+      function resetAccel(modelAccel) {
+        modelAccel = nrmlAccel;
+
+        if (fastEffect) {
+          fastEffect = false;
+        }
+        return modelAccel;
+      }
+
+      function formatTime(tiempoSegundos) {
+        let minutos = Math.floor(tiempoSegundos / 60);
+        let segundos = tiempoSegundos % 60;
+        return `${minutos}:${segundos < 10 ? "0" : ""}${segundos}`;
+      }
+
+      function moveBox(box) {
+        if (box.name == "cajaVerde1") {
+          cajaVerde1.position.set(300, 0, 300);
+          cajaVerde1BB.setFromObject(cajaVerde1);
+          VBox1Status = false;
+        }
+        if (box.name == "cajaVerde2") {
+          cajaVerde2.position.set(300, 0, 300);
+          cajaVerde2BB.setFromObject(cajaVerde2);
+          VBox2Status = false;
+        }
+        if (box.name == "mainBox") {
+          mainBox.position.copy(
+            posicionesDisponibles[
+            Math.floor(Math.random() * posicionesDisponibles.length)
+            ]
+          );
+          mainBoxBB.setFromObject(mainBox);
+        }
+      }
+
+      function resetBox() {
+        V1BoxStatus = true;
+        V2BoxStatus = true;
+        cajaVerde1.position.copy(cajaVerdePos1);
+        cajaVerde2.position.copy(cajaVerdePos2);
+        cajaVerde1BB.setFromObject(cajaVerde1);
+        cajaVerde2BB.setFromObject(cajaVerde2);
+      }
+
+      function iniciarTemporizador() {
+        temporizador = setInterval(function () {
+          tiempoRestante--;
+          fastEffectTimer();
+        }, 1000);
+      }
+
+      // Cargar los sonidos
+      const coinSound = new Audio('Mario Coin Sound - Sound Effect (HD).mp3');
+      const speedBoostSound = new Audio('Speed Boost Sound Effect.mp3');
+
+      function checkCollisions() {
+        if (model1BB.intersectsBox(cajaVerde1BB)) {
+          console.log("Speed UP!");
+          moveBox(cajaVerde1);
+          model1Accel = fastTarget(model1Accel);
+          speedBoostSound.play(); // Sonido al aumentar velocidad
+        }
+
+        if (model1BB.intersectsBox(cajaVerde2BB)) {
+          console.log("Speed UP!");
+          moveBox(cajaVerde2);
+          model1Accel = fastTarget(model1Accel);
+          speedBoostSound.play(); // Sonido al aumentar velocidad
+        }
+
+
+
+        if (model1BB.intersectsBox(mainBoxBB)) {
+          moveBox(mainBox);
+          puntosJ1++;
+          console.log("Puntuación:", puntosJ1);
+          coinSound.play(); // Sonido al ganar un punto
+        }
+      }
+
+
+      function gameLogic() {
+        if (tiempoRestante >= 0) {
+          console.log("Tiempo restante: " + formatTime(tiempoRestante));
+          checkCollisions();
+        } else {
+          clearInterval(temporizador);
+          temporizador = undefined;
+          canMove = false;
+          document.getElementById("points").value = puntosJ1;
+          document.getElementById("puntosJ1").innerText = puntosJ1;
+          document.getElementById("PopupFinal").style.display = "block";
+        }
+      }
+
+      iniciarTemporizador();
+
+      //---Logica de Render----------------------------------------------------------------------------------
+      function resizeRendererToDisplaySize(renderer) {
+        const canvas = renderer.domElement;
+        const width = canvas.clientWidth;
+        const height = canvas.clientHeight;
+        const needResize = canvas.width !== width || canvas.height !== height;
+        if (needResize) {
+          renderer.setSize(width, height, false);
+        }
+        return needResize;
+      }
+
+      function setScissorForElement(elem) {
+        const canvasRect = canvas.getBoundingClientRect();
+        const elemRect = elem.getBoundingClientRect();
+
+        // compute a canvas relative rectangle
+        const right =
+          Math.min(elemRect.right, canvasRect.right) - canvasRect.left;
+        const left = Math.max(0, elemRect.left - canvasRect.left);
+        const bottom =
+          Math.min(elemRect.bottom, canvasRect.bottom) - canvasRect.top;
+        const top = Math.max(0, elemRect.top - canvasRect.top);
+
+        const width = Math.min(canvasRect.width, right - left);
+        const height = Math.min(canvasRect.height, bottom - top);
+
+        // setup the scissor to only render to that part of the canvas
+        const positiveYUpBottom = canvasRect.height - bottom;
+        renderer.setScissor(left, positiveYUpBottom, width, height);
+        renderer.setViewport(left, positiveYUpBottom, width, height);
+
+        // return the aspect
+        return width / height;
+      }
+
+      function updateCamera(camera, model) {
+        const modelDirection = new THREE.Vector3(0, 0, 1);
+
+        modelDirection.applyQuaternion(model.quaternion);
+        modelDirection.normalize();
+
+        const cameraDistance = 20;
+
+        const cameraHeight = 10;
+
+        const cameraPosition = model.position
+          .clone()
+          .addScaledVector(modelDirection, -cameraDistance)
+          .add(new THREE.Vector3(0, cameraHeight, 0));
+        camera.position.copy(cameraPosition);
+        camera.lookAt(model.position);
+      }
+
+      function girarItems() {
+        let intervalo = 0.1;
+        mainBox.rotation.y += intervalo;
+        cajaVerde1.rotation.y += intervalo;
+        cajaVerde2.rotation.y += intervalo;
+      }
+
+      //Funcion principal de renderizado-------------------------
+      function render() {
+        resizeRendererToDisplaySize(renderer);
+
+        scene.background.set("#34495E");
+        girarItems();
+
+        // render
+        renderer.render(scene, camera);
+
+        if (model1object) {
+          updateCamera(camera, model1object);
+        }
+        if (canMove) {
+          movement(model1object, 0.016, keys1, model1Accel);
+        }
+        model1BB.setFromObject(model1object);
+        gameLogic();
+
+        requestAnimationFrame(render);
+      }
+      requestAnimationFrame(render);
+    }
+    main();
+  </script>
+</body>
+
+</html>
