@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Acorn Rush | Menu Principal</title>
     <link rel="icon" href="Modelos/squirrel.webp">
-
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <link rel="stylesheet" href="inicio.css">
 </head>
 
@@ -15,6 +15,16 @@
         <br>
         <h1 class="logo">ACORN RUSH</h1>
         <br>
+        <p>Por favor, inicia sesión para continuar.</p>
+
+        
+        <div id="g_id_onload"
+             data-client_id="564375258488-2lgpli0v3reem5nifsc82nhlatgrg217.apps.googleusercontent.com"
+             data-context="signin"
+             data-callback="handleCredentialResponse"
+             data-auto_prompt="true">
+        </div>
+        <div class="g_id_signin" data-type="standard"></div>
     </div>
     <div class="main">
         
@@ -22,6 +32,58 @@
         <a href="ajustes.html"><button class= "botonsillos" > AJUSTES </button></a>
         <a href="puntuaciones.html"><button class= "botonsillos"> LEADERBOARD </button></a>
     </div>
+    <script>
+        // Función para manejar la respuesta de Google
+        function handleCredentialResponse(response) {
+            console.log("Credenciales recibidas:", response.credential);
+
+            // Decodificar el token JWT para obtener información del usuario
+            const payload = JSON.parse(atob(response.credential.split('.')[1]));
+            console.log("Usuario:", payload);
+
+            // Guardar los datos del usuario en localStorage
+            localStorage.setItem("userName", payload.name);
+            localStorage.setItem("userEmail", payload.email);
+            localStorage.setItem("userLoggedIn", true);
+
+            // Agregar al leaderboard con 0 puntos
+            agregarJugadorAlLeaderboard(payload.name);
+
+            // Mostrar el menú y ocultar el login
+            document.getElementById("login-container").style.display = "none";
+            document.getElementById("menu-container").style.display = "block";
+        }
+
+        // Función para agregar un jugador al leaderboard con 0 puntos
+        function agregarJugadorAlLeaderboard(nombre) {
+            const puntuaciones = JSON.parse(localStorage.getItem('puntuaciones')) || [];
+            
+            // Verificar si el jugador ya está en el leaderboard
+            const jugadorExistente = puntuaciones.find(jugador => jugador.nombre === nombre);
+            if (!jugadorExistente) {
+                puntuaciones.push({ nombre: nombre, puntaje: 0 });
+                localStorage.setItem('puntuaciones', JSON.stringify(puntuaciones));
+            }
+        }
+        // Función para actualizar el puntaje de un jugador
+function actualizarPuntaje(nombre, nuevoPuntaje) {
+    const puntuaciones = JSON.parse(localStorage.getItem('puntuaciones')) || [];
+    
+    const jugador = puntuaciones.find(jugador => jugador.nombre === nombre);
+    if (jugador) {
+        jugador.puntaje = Math.max(jugador.puntaje, nuevoPuntaje); // Guarda el puntaje más alto
+        localStorage.setItem('puntuaciones', JSON.stringify(puntuaciones));
+    }
+}
+
+// Ejemplo: Actualizar el puntaje del jugador al finalizar una partida
+function finalizarPartida() {
+    const nombreJugador = localStorage.getItem('userName');
+    const puntajeObtenido = Math.floor(Math.random() * 1000); // Simula un puntaje aleatorio
+    actualizarPuntaje(nombreJugador, puntajeObtenido);
+}
+
+    </script>
 
 </body>
 
